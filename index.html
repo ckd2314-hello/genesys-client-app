@@ -2,17 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Genesys Client App using DirectoryApi</title>
+  <title>Genesys Client App SDK</title>
 
-  <!-- Client Apps SDK (official CDN) -->
-  <script src="https://sdk-cdn.mypurecloud.com/client-apps/latest/purecloud-client-app-sdk.js"></script>
+  <!-- Genesys Client Apps SDK (공식 CDN) -->
+  <script
+    src="https://sdk-cdn.mypurecloud.com/client-apps/latest/purecloud-client-app-sdk.js">
+  </script>
 
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 12px;
+    }
+    pre {
+      background: #111;
+      color: #0f0;
+      padding: 10px;
+      max-height: 400px;
+      overflow: auto;
+    }
+  </style>
 </head>
 <body>
 
-  <h2>DirectoryApi Demo</h2>
+  <h3>Genesys Client App SDK – GitHub Pages</h3>
 
-  <button id="btnWhoAmI">Show Me Info (User + Groups)</button>
+  <button id="btnStatus">Check App Status</button>
+  <button id="btnUser">Get User</button>
+  <button id="btnDirectory">Directory (Groups)</button>
+
   <pre id="output"></pre>
 
   <script src="app.js"></script>
