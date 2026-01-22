@@ -1,38 +1,77 @@
-// Global SDK
-const ClientApps = window.purecloudClientAppSdk;
-
-// Create app
-const app = new ClientApps.App();
 const output = document.getElementById("output");
 
-// Logging helper
+/* ---------- util ---------- */
 function log(title, data) {
   output.textContent += `\n=== ${title} ===\n`;
   if (data !== undefined) {
-    output.textContent += JSON.stringify(data, null, 2) + "\n";
+    output.textContent +=
+      typeof data === "string"
+        ? data
+        : JSON.stringify(data, null, 2);
+    output.textContent += "\n";
   }
 }
 
-// When SDK handshake completes
+/* ---------- SDK 존재 확인 (중요) ---------- */
+if (!window.purecloudClientAppSdk) {
+  log("ERROR", "purecloudClientAppSdk NOT loaded");
+  throw new Error("Client App SDK not loaded");
+}
+
+/* ---------- App 생성 ---------- */
+const ClientAppSdk = window.purecloudClientAppSdk;
+const app = new ClientAppSdk.App();
+
+/* ---------- Lifecycle ---------- */
+/**
+ * 공식 문서 기준:
+ * app:ready 이후에만 SDK API 호출 가능
+ */
 app.on("app:ready", async () => {
-  log("APP READY", "Client App Initialized");
+  log("APP READY", "Handshake with Genesys Cloud completed");
+
+  try {
+    const appInfo = await app.getAppInfo();
+    log("APP INFO", appInfo);
+  } catch (e) {
+    log("APP INFO ERROR", e.toString());
+  }
 });
 
-// Button click handler
-document.getElementById("btnWhoAmI").onclick = async () => {
+/* ---------- 버튼: 상태 ---------- */
+document.getElementById("btnStatus").onclick = async () => {
   try {
-    // Basic user info
+    const info = await app.getAppInfo();
+    log("STATUS", info);
+  } catch (e) {
+    log("STATUS ERROR", e.toString());
+  }
+};
+
+/* ---------- 버튼: 사용자 ---------- */
+document.getElementById("btnUser").onclick = async () => {
+  try {
     const user = await app.getUser();
-    log("User Info", user);
+    log("USER", user);
+  } catch (e) {
+    log("USER ERROR", e.toString());
+  }
+};
 
-    // DirectoryApi invocation
-    const directory = new app.DirectoryApi();
+/* ---------- 버튼: Directory API ---------- */
+document.getElementById("btnDirectory").onclick = async () => {
+  try {
+    const user = await app.getUser();
 
-    // e.g., search groups the user is in (example filter by given user ID)
-    const groupResponse = await directory.getDirectoryUsersGroups(user.id);
-    log("User Groups", groupResponse);
-    
-  } catch (error) {
-    log("Error", error.toString());
+    /**
+     * 공식 문서:
+     * DirectoryApi는 Client App SDK 내부 API
+     */
+    const directoryApi = new app.DirectoryApi();
+
+    const groups = await directoryApi.getDirectoryUsersGroups(user.id);
+    log("DIRECTORY GROUPS", groups);
+  } catch (e) {
+    log("DIRECTORY ERROR", e.toString());
   }
 };
