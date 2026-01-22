@@ -1,202 +1,166 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Genesys Client App – Auth & Alerting Status</title>
+    <title>Genesys Client App - Alerting Demo</title>
 
-  <!-- Bootstrap (UI용) -->
-  <link rel="stylesheet"
-        href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet"
+          href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet"
+          href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
 
-  <!-- jQuery -->
-  <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script src="https://sdk-cdn.mypurecloud.com/client-apps/2.6.3/purecloud-client-app-sdk-de77761d.min.js"></script>
 
-  <!-- Genesys Client Apps SDK (공식) -->
-  <script src="https://sdk-cdn.mypurecloud.com/client-apps/2.6.3/purecloud-client-app-sdk-de77761d.min.js"></script>
-
-  <style>
-    body { margin: 20px; }
-    ul#statusPanel li { font-weight: bold; }
-    pre { background: #111; color: #0f0; padding: 10px; }
-  </style>
+    <style>
+        body { margin: 20px; }
+        fieldset { margin-top: 30px; }
+        .status span { font-weight: bold; }
+    </style>
 </head>
 
 <body>
 
 <h2>Genesys Client App – Runtime Status</h2>
 
-<ul id="statusPanel">
-  <li id="sdkStatus">SDK: ❌ Not Loaded</li>
-  <li id="readyStatus">App Ready: ❌</li>
-  <li id="userStatus">User: ❌</li>
-  <li id="alertStatus">Alerting API: ❌</li>
-</ul>
+<div class="alert alert-info status">
+    <ul>
+        <li>SDK: <span id="sdk">❌</span></li>
+        <li>App Ready: <span id="ready">❌</span></li>
+        <li>User: <span id="user">❌</span></li>
+        <li>Alerting API: <span id="alerting">❌</span></li>
+    </ul>
+</div>
 
 <hr>
 
-<h3>Send Toast (Alerting API)</h3>
+<h2>Send a Toast</h2>
 
-<form id="toastForm" class="form-horizontal">
-  <div class="form-group">
-    <label class="col-sm-1 control-label">Title</label>
-    <div class="col-sm-11">
-      <input id="title" class="form-control" placeholder="Toast title">
+<form class="form-horizontal">
+    <div class="form-group">
+        <label class="col-sm-2 control-label">Title</label>
+        <div class="col-sm-10">
+            <input type="text" id="title" class="form-control">
+        </div>
     </div>
-  </div>
 
-  <div class="form-group">
-    <label class="col-sm-1 control-label">Message</label>
-    <div class="col-sm-11">
-      <textarea id="message" class="form-control" rows="3"
-                placeholder="Toast message"></textarea>
+    <div class="form-group">
+        <label class="col-sm-2 control-label">Message</label>
+        <div class="col-sm-10">
+            <textarea id="message" rows="3" class="form-control"></textarea>
+        </div>
     </div>
-  </div>
 
-  <div class="form-group">
-    <label class="col-sm-1 control-label">Type</label>
-    <div class="col-sm-11">
-      <select id="toastType" class="form-control">
-        <option value="info">Info</option>
-        <option value="success">Success</option>
-        <option value="error">Error</option>
-      </select>
+    <div class="form-group">
+        <label class="col-sm-2 control-label">Type</label>
+        <div class="col-sm-10">
+            <select id="toastType" class="form-control">
+                <option value="info">Info</option>
+                <option value="success">Success</option>
+                <option value="error">Error</option>
+            </select>
+        </div>
     </div>
-  </div>
 
-  <div class="form-group">
-    <div class="col-sm-offset-1 col-sm-11">
-      <button type="submit" class="btn btn-primary">Send Toast</button>
+    <div class="form-group">
+        <div class="col-sm-offset-2 col-sm-10">
+            <button class="btn btn-primary" id="sendToast">Send Toast</button>
+        </div>
     </div>
-  </div>
 </form>
 
 <hr>
 
-<h3>Attention Count</h3>
-<button class="btn btn-info" id="incAttention">Increase</button>
-<button class="btn btn-warning" id="clearAttention">Clear</button>
+<h2>Attention Counter</h2>
+<button class="btn btn-primary" id="incAttn">Increase</button>
+<button class="btn btn-default" id="clearAttn">Clear</button>
 
 <hr>
 
-<h3>Open Window (Core UI)</h3>
-<input id="targetURL" class="form-control"
+<h2>Open Window</h2>
+<input type="text" id="targetURL" class="form-control"
        placeholder="https://en.wikipedia.org/wiki/Main_Page">
 <br>
-<button class="btn btn-default" id="openWindow">Open Window</button>
-
-<hr>
-
-<h3>Debug Log</h3>
-<pre id="log"></pre>
+<button class="btn btn-primary" id="openWindow">Open Window</button>
 
 <script>
-  function log(msg) {
-    document.getElementById("log").textContent += msg + "\n";
-  }
+$(function () {
 
-  function setStatus(id, text, ok) {
-    const el = document.getElementById(id);
-    el.textContent = text;
-    el.style.color = ok ? "green" : "red";
-  }
+    /* =====================================================
+       1. Client App 초기화 (공식 예제 그대로)
+       ===================================================== */
+    let clientApp = null;
 
-  $(function () {
-    let clientApp;
-    let attentionCount = 0;
+    const params = new URLSearchParams(window.location.search);
 
-    /* -----------------------------
-       1. SDK 로드 확인
-    ------------------------------ */
-    if (window.purecloud && window.purecloud.apps && window.purecloud.apps.ClientApp) {
-      setStatus("sdkStatus", "SDK: ✅ Loaded", true);
-      log("SDK loaded");
+    if (params.get('gcHostOrigin') || params.get('gcTargetEnv')) {
+        clientApp = new window.purecloud.apps.ClientApp({
+            gcHostOriginQueryParam: 'gcHostOrigin',
+            gcTargetEnvQueryParam: 'gcTargetEnv'
+        });
+    } else if (params.get('pcEnvironment')) {
+        clientApp = new window.purecloud.apps.ClientApp({
+            pcEnvironmentQueryParam: 'pcEnvironment'
+        });
     } else {
-      setStatus("sdkStatus", "SDK: ❌ NOT Loaded", false);
-      log("SDK NOT loaded");
-      return;
+        clientApp = new window.purecloud.apps.ClientApp();
     }
 
-    /* -----------------------------
-       2. Client App 생성
-    ------------------------------ */
-    clientApp = new window.purecloud.apps.ClientApp();
+    $('#sdk').text('✅');
 
-    clientApp.on("app:ready", async () => {
-      setStatus("readyStatus", "App Ready: ✅ Handshake complete", true);
-      log("app:ready received");
+    /* =====================================================
+       2. 인증 / 실행 컨텍스트 확인 (핵심)
+       ===================================================== */
+    clientApp.lifecycle.ready()
+        .then(() => {
+            $('#ready').text('✅');
 
-      /* -----------------------------
-         3. 사용자 정보 (인증 확인)
-      ------------------------------ */
-      try {
-        const user = await clientApp.getUser();
-        setStatus(
-          "userStatus",
-          `User: ✅ ${user.name} (${user.email})`,
-          true
-        );
-        log("User loaded: " + user.id);
-      } catch (e) {
-        setStatus("userStatus", "User: ❌ getUser failed", false);
-        log("getUser failed: " + e);
-      }
-    });
+            return clientApp.user.getMe();
+        })
+        .then(user => {
+            $('#user').text(`✅ ${user.name}`);
+            $('#alerting').text('✅');
+            console.log('Logged-in user:', user);
+        })
+        .catch(err => {
+            console.error('Client App initialization failed:', err);
+        });
 
-    clientApp.on("app:error", (err) => {
-      log("ClientApp error: " + JSON.stringify(err));
-    });
+    /* =====================================================
+       3. Toast
+       ===================================================== */
+    $('#sendToast').on('click', function (e) {
+        e.preventDefault();
 
-    /* -----------------------------
-       4. Toast (Alerting API)
-    ------------------------------ */
-    $("#toastForm").on("submit", function (e) {
-      e.preventDefault();
-
-      try {
         clientApp.alerting.showToastPopup(
-          $("#title").val(),
-          $("#message").val(),
-          {
-            type: $("#toastType").val(),
-            timeout: 5,
-            showCloseButton: true
-          }
+            $('#title').val(),
+            $('#message').val(),
+            { type: $('#toastType').val() }
         );
-
-        setStatus("alertStatus", "Alerting API: ✅ Toast sent", true);
-        log("Toast sent");
-      } catch (e) {
-        setStatus("alertStatus", "Alerting API: ❌ Failed", false);
-        log("Toast failed: " + e);
-      }
     });
 
-    /* -----------------------------
-       5. Attention Count
-    ------------------------------ */
-    $("#incAttention").on("click", function () {
-      attentionCount++;
-      clientApp.alerting.setAttentionCount(attentionCount);
-      log("Attention count: " + attentionCount);
+    /* =====================================================
+       4. Attention Counter
+       ===================================================== */
+    let count = 0;
+
+    $('#incAttn').on('click', function () {
+        count++;
+        clientApp.alerting.setAttentionCount(count);
     });
 
-    $("#clearAttention").on("click", function () {
-      attentionCount = 0;
-      clientApp.alerting.setAttentionCount(0);
-      log("Attention cleared");
+    $('#clearAttn').on('click', function () {
+        count = 0;
+        clientApp.alerting.setAttentionCount(0);
     });
 
-    /* -----------------------------
-       6. Core UI
-    ------------------------------ */
-    $("#openWindow").on("click", function () {
-      const url = $("#targetURL").val();
-      if (url) {
-        clientApp.coreUi.openWindow(url);
-        log("Opened window: " + url);
-      }
+    /* =====================================================
+       5. Open Window
+       ===================================================== */
+    $('#openWindow').on('click', function () {
+        clientApp.coreUi.openWindow($('#targetURL').val());
     });
-  });
+
+});
 </script>
 
 </body>
