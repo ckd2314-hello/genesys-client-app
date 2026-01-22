@@ -1,74 +1,38 @@
-const ClientAppSdk = window.purecloudClientAppSdk;
-const app = new ClientAppSdk.App();
+// Global SDK
+const ClientApps = window.purecloudClientAppSdk;
 
+// Create app
+const app = new ClientApps.App();
 const output = document.getElementById("output");
 
+// Logging helper
 function log(title, data) {
   output.textContent += `\n=== ${title} ===\n`;
   if (data !== undefined) {
-    output.textContent +=
-      typeof data === "string"
-        ? data
-        : JSON.stringify(data, null, 2);
-    output.textContent += "\n";
+    output.textContent += JSON.stringify(data, null, 2) + "\n";
   }
 }
 
-/**
- * 1️⃣ 앱이 Genesys Cloud 안에서 정상적으로 초기화되었는지
- */
+// When SDK handshake completes
 app.on("app:ready", async () => {
-  log("APP READY", "Client App handshake completed");
-
-  try {
-    const appInfo = await app.getAppInfo();
-    log("APP INFO (auto)", appInfo);
-  } catch (e) {
-    log("APP INFO ERROR (auto)", e.toString());
-  }
-
-  try {
-    const user = await app.getUser();
-    log("USER (auto)", user);
-  } catch (e) {
-    log("USER ERROR (auto)", e.toString());
-  }
+  log("APP READY", "Client App Initialized");
 });
 
-/**
- * 2️⃣ 수동 상태 확인
- */
-document.getElementById("btnStatus").onclick = async () => {
-  log("STATUS CHECK", "button clicked");
-
+// Button click handler
+document.getElementById("btnWhoAmI").onclick = async () => {
   try {
-    const info = await app.getAppInfo();
-    log("APP INFO", info);
-  } catch (e) {
-    log("APP INFO ERROR", e.toString());
-  }
-};
-
-/**
- * 3️⃣ 사용자 컨텍스트 확인 (인증 확인용 핵심)
- */
-document.getElementById("btnUser").onclick = async () => {
-  try {
+    // Basic user info
     const user = await app.getUser();
-    log("USER", user);
-  } catch (e) {
-    log("USER ERROR", e.toString());
-  }
-};
+    log("User Info", user);
 
-/**
- * 4️⃣ App Info 버튼
- */
-document.getElementById("btnAppInfo").onclick = async () => {
-  try {
-    const info = await app.getAppInfo();
-    log("APP INFO", info);
-  } catch (e) {
-    log("APP INFO ERROR", e.toString());
+    // DirectoryApi invocation
+    const directory = new app.DirectoryApi();
+
+    // e.g., search groups the user is in (example filter by given user ID)
+    const groupResponse = await directory.getDirectoryUsersGroups(user.id);
+    log("User Groups", groupResponse);
+    
+  } catch (error) {
+    log("Error", error.toString());
   }
 };
